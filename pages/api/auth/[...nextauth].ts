@@ -1,14 +1,9 @@
 import NextAuth from 'next-auth'
+import { JWT } from 'next-auth/jwt'
 import SpotifyProvider from 'next-auth/providers/spotify'
 import spotifyApi, { LOGIN_URL } from '../../../lib/spotify'
 
-type Token = {
-  accessToken: string
-  accessTokenExpires: number
-  refreshToken: string
-}
-
-async function refreshAccessToken(token: Token) {
+async function refreshAccessToken(token: JWT) {
   try {
     spotifyApi.setAccessToken(token.accessToken)
     spotifyApi.setRefreshToken(token.refreshToken)
@@ -36,18 +31,18 @@ export default NextAuth({
   // Configure one or more authentication providers
   providers: [
     SpotifyProvider({
-      clientId: process.env.NEXT_PUBLIC_CLIENT_ID ?? '',
-      clientSecret: process.env.NEXT_PUBLIC_CLIENT_SECRET ?? '',
+      clientId: process.env.NEXT_PUBLIC_CLIENT_ID!,
+      clientSecret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
       authorization: LOGIN_URL,
     }),
     // ...add more providers here
   ],
-  secret: process.env.JWT_SECRET ?? '',
+  secret: process.env.JWT_SECRET!,
   pages: {
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, account, user }: any) {
+    async jwt({ token, account, user }) {
       // initial sign in
       if (account && user) {
         return {
@@ -60,7 +55,7 @@ export default NextAuth({
       }
 
       // return previous token if the access token has not expired yet
-      if (Date.now() < token.accessTokenExpires) {
+      if (Date.now() < (token.accessTokenExpires as Number)) {
         return token
       }
 
@@ -69,10 +64,10 @@ export default NextAuth({
       return await refreshAccessToken(token)
     },
 
-    async session({ session, token }: any) {
-      session.user.accessToken = token.accessToken
-      session.user.refreshToken = token.refreshToken
-      session.user.username = token.username
+    async session({ session, token }) {
+      session.accessToken = token.accessToken
+      session.refreshToken = token.refreshToken
+      session.username = token.username
 
       return session
     },
