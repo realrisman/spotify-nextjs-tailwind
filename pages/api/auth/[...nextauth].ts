@@ -1,7 +1,29 @@
-import NextAuth from 'next-auth'
+import NextAuth, { Session } from 'next-auth'
 import { JWT } from 'next-auth/jwt'
 import SpotifyProvider from 'next-auth/providers/spotify'
 import spotifyApi, { LOGIN_URL } from '../../../lib/spotify'
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    accessTokenExpires: number
+    accessToken: string | undefined
+    refreshToken: string | undefined
+    username: string
+  }
+}
+
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      accessToken: string | undefined
+      refreshToken: string | undefined
+      username: string | undefined
+      image: string | undefined
+      name: string | undefined
+      email: string | undefined
+    }
+  }
+}
 
 async function refreshAccessToken(token: JWT) {
   try {
@@ -42,7 +64,7 @@ export default NextAuth({
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, account, user }) {
+    async jwt({ token, account, user }): Promise<JWT> {
       // initial sign in
       if (account && user) {
         return {
@@ -64,10 +86,10 @@ export default NextAuth({
       return await refreshAccessToken(token)
     },
 
-    async session({ session, token }) {
-      session.accessToken = token.accessToken
-      session.refreshToken = token.refreshToken
-      session.username = token.username
+    async session({ session, token }): Promise<Session> {
+      session.user.accessToken = token.accessToken
+      session.user.refreshToken = token.refreshToken
+      session.user.username = token.username
 
       return session
     },
